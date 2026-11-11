@@ -4,6 +4,10 @@
 
 Pedidos com cotação de frete assíncrona: a API grava o pedido e publica um evento na fila; um worker em TypeScript consome a mensagem, calcula o frete e devolve a cotação pela própria API.
 
+**Demonstração:** https://idalinosou.github.io/vant.orders/
+
+A demonstração no GitHub Pages roda sem servidor: a interface entra em modo demonstração, com pedidos de exemplo e cotação simulada no navegador. A API real, o RabbitMQ e o worker sobem juntos pelo Docker Compose.
+
 O projeto existe para mostrar, de ponta a ponta, o stack usado em vagas back-end: Java com Spring Boot, Node.js com TypeScript, Angular, OpenAPI, Oracle/SQL Server, Docker, Jenkins, Maven, mensageria, cloud e CI/CD.
 
 ## Stack em uso
