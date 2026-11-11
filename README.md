@@ -1,5 +1,7 @@
 # vant.orders
 
+[![CI](https://github.com/idalinosou/vant.orders/actions/workflows/ci.yml/badge.svg)](https://github.com/idalinosou/vant.orders/actions/workflows/ci.yml)
+
 Pedidos com cotação de frete assíncrona: a API grava o pedido e publica um evento na fila; um worker em TypeScript consome a mensagem, calcula o frete e devolve a cotação pela própria API.
 
 O projeto existe para mostrar, de ponta a ponta, o stack usado em vagas back-end: Java com Spring Boot, Node.js com TypeScript, Angular, OpenAPI, Oracle/SQL Server, Docker, Jenkins, Maven, mensageria, cloud e CI/CD.
