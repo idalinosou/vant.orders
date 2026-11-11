@@ -25,9 +25,17 @@
 
 .brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  margin-right: 2px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(56, 189, 248, 0.25));
 }
 
 .logo {
