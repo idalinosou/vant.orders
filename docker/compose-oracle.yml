@@ -1,0 +1,36 @@
+services:
+  oracle:
+    image: gvenzl/oracle-free:23-slim
+    container_name: vant-orders-oracle
+    profiles: [oracle]
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-VantPassw0rd}
+      APP_USER: orders
+      APP_USER_PASSWORD: ${ORACLE_APP_PASSWORD:-orders}
+    ports:
+      - "1521:1521"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: rabbit,oracle
+      DB_HOST: oracle
+      DB_PORT: "1521"
+      DB_SERVICE: FREEPDB1
+      DB_USER: orders
+      DB_PASSWORD: ${ORACLE_APP_PASSWORD:-orders}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      oracle:
+        condition: service_healthy
+
+volumes:
+  oracle-data:

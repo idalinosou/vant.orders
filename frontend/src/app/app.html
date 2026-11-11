@@ -1,0 +1,293 @@
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">vant<span class="logo-dot">.</span></span>
+      <span class="brand-name">orders</span>
+      <span class="brand-tag">pedidos &amp; frete</span>
+    </div>
+
+    <div class="topbar-actions">
+      @if (service.demo()) {
+        <span class="tag tag-demo" title="API fora de alcance: os dados são simulados no navegador">
+          modo demonstração
+        </span>
+      } @else {
+        <span class="tag tag-live">API conectada</span>
+      }
+      <a class="ghost-btn" [href]="service.docsUrl" target="_blank" rel="noopener">Swagger</a>
+      <button class="ghost-btn" type="button" (click)="load()" [disabled]="loading()">Atualizar</button>
+    </div>
+  </header>
+
+  <main class="content">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">spring boot &middot; rabbitmq &middot; typescript</p>
+        <h1>Pedido criado, frete calculado.</h1>
+        <p class="lede">
+          A API grava o pedido no banco e publica um evento na fila. Um worker em TypeScript consome
+          a mensagem, aplica a regra de frete e devolve a cotação pela própria API.
+        </p>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi">
+          <span class="kpi-value">{{ counts().ALL }}</span>
+          <span class="kpi-label">pedidos</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-value">{{ counts().CREATED }}</span>
+          <span class="kpi-label">na fila</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-value">{{ counts().QUOTED }}</span>
+          <span class="kpi-label">cotados</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-value">{{ counts().DELIVERED }}</span>
+          <span class="kpi-label">entregues</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel form-panel">
+        <div class="panel-head">
+          <h2>Novo pedido</h2>
+          <span class="panel-hint">evento publicado na fila</span>
+        </div>
+
+        <form (submit)="submit($event)" novalidate>
+          <label class="field">
+            <span>Cliente</span>
+            <input
+              type="text"
+              placeholder="Nome do destinatário"
+              autocomplete="off"
+              [value]="customerName()"
+              (input)="customerName.set(value($event))"
+              (blur)="markTouched('customerName')"
+            />
+            @if (fieldError('customerName'); as message) {
+              <small class="field-error">{{ message }}</small>
+            }
+          </label>
+
+          <div class="field-row">
+            <label class="field">
+              <span>CEP de origem</span>
+              <input
+                type="text"
+                inputmode="numeric"
+                placeholder="00000000"
+                maxlength="8"
+                [value]="originCep()"
+                (input)="originCep.set(digitsOnly($event.target))"
+                (blur)="markTouched('originCep')"
+              />
+              @if (fieldError('originCep'); as message) {
+                <small class="field-error">{{ message }}</small>
+              }
+            </label>
+
+            <label class="field">
+              <span>CEP de destino</span>
+              <input
+                type="text"
+                inputmode="numeric"
+                placeholder="00000000"
+                maxlength="8"
+                [value]="destinationCep()"
+                (input)="destinationCep.set(digitsOnly($event.target))"
+                (blur)="markTouched('destinationCep')"
+              />
+              @if (fieldError('destinationCep'); as message) {
+                <small class="field-error">{{ message }}</small>
+              }
+            </label>
+          </div>
+
+          <label class="field">
+            <span>Peso (kg)</span>
+            <input
+              type="text"
+              inputmode="decimal"
+              placeholder="12,5"
+              [value]="weightKg()"
+              (input)="weightKg.set(value($event))"
+              (blur)="markTouched('weightKg')"
+            />
+            @if (fieldError('weightKg'); as message) {
+              <small class="field-error">{{ message }}</small>
+            }
+          </label>
+
+          <button class="primary-btn" type="submit" [disabled]="!formValid() || busy()">
+            {{ busy() ? 'Enviando...' : 'Criar pedido' }}
+          </button>
+        </form>
+
+        <p class="form-note">
+          CEPs com 8 dígitos e peso maior que zero. A cotação chega de forma assíncrona, pelo worker.
+        </p>
+      </section>
+
+      <section class="panel list-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Pedidos</h2>
+            <span class="panel-hint">{{ filtered().length }} de {{ counts().ALL }} exibidos</span>
+          </div>
+
+          <label class="search">
+            <span class="search-icon">/</span>
+            <input
+              type="search"
+              placeholder="código, cliente ou CEP"
+              [value]="search()"
+              (input)="search.set(value($event))"
+            />
+          </label>
+        </div>
+
+        <div class="filters">
+          @for (filter of filters; track filter) {
+            <button
+              type="button"
+              class="filter"
+              [class.is-active]="statusFilter() === filter"
+              (click)="statusFilter.set(filter)"
+            >
+              {{ filter === 'ALL' ? 'todos' : statusLabel[filter].toLowerCase() }}
+              <span class="filter-count">{{ counts()[filter] }}</span>
+            </button>
+          }
+        </div>
+
+        <div class="rows">
+          @if (loading()) {
+            <p class="empty">Carregando pedidos...</p>
+          } @else {
+            @for (order of filtered(); track order.id) {
+              <button type="button" class="row" (click)="select(order)">
+                <span class="row-main">
+                  <span class="row-code">{{ order.code }}</span>
+                  <span class="row-customer">{{ order.customerName }}</span>
+                </span>
+
+                <span class="row-route">
+                  {{ formatCep(order.originCep) }} → {{ formatCep(order.destinationCep) }}
+                  <span class="row-weight">{{ order.weightKg | number: '1.0-2' }} kg</span>
+                </span>
+
+                <span class="row-meta">
+                  <span [class]="'chip s-' + order.status.toLowerCase()">
+                    {{ statusLabel[order.status] }}
+                  </span>
+                  <span class="row-freight">
+                    @if (order.freightCents !== null) {
+                      {{ money(order.freightCents) | currency: 'BRL' : 'symbol' : '1.2-2' }}
+                    } @else {
+                      aguardando cotação
+                    }
+                  </span>
+                </span>
+              </button>
+            } @empty {
+              <p class="empty">Nenhum pedido encontrado nesse filtro.</p>
+            }
+          }
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <span>vant.orders</span>
+    <span>Spring Boot &middot; RabbitMQ &middot; TypeScript &middot; Angular</span>
+  </footer>
+</div>
+
+@if (selected(); as order) {
+  <div class="overlay" (click)="closeDetail()">
+    <aside class="drawer" (click)="$event.stopPropagation()">
+      <header class="drawer-head">
+        <div>
+          <span class="row-code">{{ order.code }}</span>
+          <h2>{{ order.customerName }}</h2>
+        </div>
+        <button type="button" class="icon-btn" (click)="closeDetail()" aria-label="Fechar">×</button>
+      </header>
+
+      <div class="drawer-status">
+        <span [class]="'chip s-' + order.status.toLowerCase()">
+          {{ statusLabel[order.status] }}
+        </span>
+        <span class="drawer-updated">atualizado em {{ order.updatedAt | date: 'dd/MM HH:mm' }}</span>
+      </div>
+
+      <ol class="timeline">
+        @for (step of flow; track step; let index = $index) {
+          <li
+            class="timeline-step"
+            [class.is-done]="index < stepIndex(order.status)"
+            [class.is-current]="index === stepIndex(order.status)"
+          >
+            <span class="dot"></span>
+            <span class="step-label">{{ statusLabel[step] }}</span>
+          </li>
+        }
+      </ol>
+
+      <dl class="facts">
+        <div>
+          <dt>Origem</dt>
+          <dd>{{ formatCep(order.originCep) }}</dd>
+        </div>
+        <div>
+          <dt>Destino</dt>
+          <dd>{{ formatCep(order.destinationCep) }}</dd>
+        </div>
+        <div>
+          <dt>Peso</dt>
+          <dd>{{ order.weightKg | number: '1.0-2' }} kg</dd>
+        </div>
+        <div>
+          <dt>Criado em</dt>
+          <dd>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</dd>
+        </div>
+      </dl>
+
+      <div class="quote-box" [class.is-empty]="order.freightCents === null">
+        @if (order.freightCents !== null) {
+          <span class="quote-label">Frete calculado pelo worker</span>
+          <span class="quote-value">
+            {{ money(order.freightCents) | currency: 'BRL' : 'symbol' : '1.2-2' }}
+          </span>
+          <span class="quote-meta">
+            {{ order.carrier }} &middot; previsão de {{ order.estimatedDays }} dia(s)
+          </span>
+        } @else {
+          <span class="quote-label">Aguardando cotação</span>
+          <span class="quote-meta">O worker consome o evento e devolve o valor em instantes.</span>
+        }
+      </div>
+
+      @if (nextStatus(order); as next) {
+        <button type="button" class="primary-btn" (click)="advance(order)" [disabled]="busy()">
+          Marcar como {{ statusLabel[next].toLowerCase() }}
+        </button>
+      } @else if (order.status === 'CREATED') {
+        <p class="drawer-note">
+          A cotação é automática: assim que o worker responder, o pedido fica pronto para despacho.
+        </p>
+      } @else {
+        <p class="drawer-note">Pedido entregue: fim do fluxo.</p>
+      }
+    </aside>
+  </div>
+}
+
+@if (feedback()) {
+  <div class="toast" [class.is-error]="feedbackKind() === 'error'">{{ feedback() }}</div>
+}

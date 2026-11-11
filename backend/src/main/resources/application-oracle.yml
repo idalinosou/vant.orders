@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    url: jdbc:oracle:thin:@//${DB_HOST:localhost}:${DB_PORT:1521}/${DB_SERVICE:FREEPDB1}
+    username: ${DB_USER:orders}
+    password: ${DB_PASSWORD:orders}
+    driver-class-name: oracle.jdbc.OracleDriver
+  flyway:
+    locations: classpath:db/migration/oracle

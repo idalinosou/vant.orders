@@ -1,0 +1,20 @@
+{
+  "name": "vant-orders-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Consome order.created e devolve a cotacao de frete para a API",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.5"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.6",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.2"
+  }
+}
